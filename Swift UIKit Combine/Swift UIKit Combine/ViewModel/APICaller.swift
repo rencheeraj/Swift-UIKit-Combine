@@ -9,8 +9,8 @@ import Foundation
 import Combine
 
 final class APICaller {
-    let passThroughSubject = PassthroughSubject<ResponceModel, Error>()
-    public func getJsonResult(completion: @escaping (Result<ResponceModel, Error>) -> Void) {
+    let passThroughSubject = PassthroughSubject<Result<ResponceModel, Error>,Never>()
+    public func getJsonResult() {
         guard let url = URL(string: base_url) else{
             return
         }
@@ -19,30 +19,24 @@ final class APICaller {
         URLSession.shared.dataTask(with: request as URLRequest) { [self](data, response, error) in
             if let error = error{
                 print(error.localizedDescription)
-                passThroughSubject.send(completion: .failure(error))
+                passThroughSubject.send(completion: .failure(error as! Never))
                 return
             }
             guard let data = data else{
-                passThroughSubject.send(completion: .failure(error!))
+                passThroughSubject.send(completion: .failure(error! as! Never))
                 return
             }
             
             do {
                 let result = try JSONDecoder().decode(ResponceModel.self, from: data)
                 print(result)
-                let response = result
-                passThroughSubject.send(result)
+                let passSub : Result<ResponceModel,Error> = .success(result)
+                passThroughSubject.send(passSub)
                 passThroughSubject.send(completion: .finished)
             }
             catch {
-                passThroughSubject.send(completion: .failure(error))
+                passThroughSubject.send(completion: .failure(error as! Never))
             }
         } .resume()
-        _ = passThroughSubject.sink(receiveCompletion: { completion in
-            // Handle the completion if needed
-        }, receiveValue: { response in
-            completion(.success(response))
-        })
-
     }
 }
