@@ -6,24 +6,24 @@
 //
 
 import Foundation
+import Combine
 
 final class APICaller {
-    static let shared = APICaller()
-    
-    public func getJsonResult(completion : @escaping (Result<ResponceModel, Error>) -> Void) {
+    let passThroughSubject = PassthroughSubject<ResponceModel, Error>()
+    public func getJsonResult(completion: @escaping (Result<ResponceModel, Error>) -> Void) {
         guard let url = URL(string: base_url) else{
             return
         }
         let request = NSMutableURLRequest(url: url as URL)
         
-        URLSession.shared.dataTask(with: request as URLRequest) { (data, response, error) in
+        URLSession.shared.dataTask(with: request as URLRequest) { [self](data, response, error) in
             if let error = error{
                 print(error.localizedDescription)
-                completion(.failure(error))
+                passThroughSubject.send(completion: .failure(error))
                 return
             }
             guard let data = data else{
-                completion(.failure(error!))
+                passThroughSubject.send(completion: .failure(error!))
                 return
             }
             
@@ -31,11 +31,18 @@ final class APICaller {
                 let result = try JSONDecoder().decode(ResponceModel.self, from: data)
                 print(result)
                 let response = result
-                completion(.success(response))
+                passThroughSubject.send(result)
+                passThroughSubject.send(completion: .finished)
             }
             catch {
-                completion(.failure(error))
+                passThroughSubject.send(completion: .failure(error))
             }
         } .resume()
+        _ = passThroughSubject.sink(receiveCompletion: { completion in
+            // Handle the completion if needed
+        }, receiveValue: { response in
+            completion(.success(response))
+        })
+
     }
 }
