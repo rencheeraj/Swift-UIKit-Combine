@@ -24,14 +24,9 @@ class ViewController: UIViewController {
         apiCaller.passThroughSubject.sink { value in
             print(value)
         } receiveValue: { value in
-            switch value{
-            case .success(let result):
-                DispatchQueue.main.async {
-                    print(result)
-                    self.displayLabel.text = result.punchline
-                }
-            case .failure(let error):
-                print(error)
+            DispatchQueue.main.async {
+                print(value)
+                self.displayLabel.text = value.punchline
             }
         }.store(in: &observer)
     }
